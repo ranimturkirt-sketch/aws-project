@@ -35,7 +35,7 @@ RUN npm run build
 FROM node:20-alpine AS runtime
 
 # Add labels for image metadata
-LABEL maintainer="ranimturkirt"
+LABEL maintainer="ranimturki"
 LABEL description="Task Manager Backend — DevSecOps AWS Project"
 LABEL version="1.0.0"
 
