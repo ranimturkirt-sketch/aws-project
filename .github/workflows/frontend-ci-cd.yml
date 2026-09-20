@@ -32,13 +32,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      
-      - name: Debug frontend
-        run: |
-          pwd
-          ls -la
-          ls -la frontend
-          test -f frontend/package-lock.json
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
