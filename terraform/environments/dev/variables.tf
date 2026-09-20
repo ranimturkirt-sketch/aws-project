@@ -77,7 +77,7 @@ variable "container_image" {
 variable "github_repository" {
   description = "GitHub repository (owner/repo)"
   type        = string
-  default = "rannim/projet-aws"
+  default = "ranimturkirt-sketch/aws-project"
 
 }
 
