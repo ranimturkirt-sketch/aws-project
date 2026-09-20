@@ -1,0 +1,32 @@
+# =============================================================================
+# Gitleaks Configuration
+# =============================================================================
+# This configuration extends the default gitleaks rules.
+# It defines allowlists for known false positives in this project.
+
+title = "Gitleaks Configuration - TaskManager DevSecOps"
+
+[extend]
+# Use the default gitleaks config as a base
+# useDefault = true
+
+[allowlist]
+description = "Global allowlist"
+
+# Paths to ignore (documentation examples, test fixtures)
+paths = [
+  '''docs/.*\.md$''',
+  '''docs/html/.*\.html$''',
+  '''diagrams/.*\.md$''',
+  '''\.gitleaks\.toml$''',
+]
+
+# Known false positive patterns
+regexes = [
+  # Terraform example ARNs in documentation
+  '''arn:aws:iam::123456789012:.*''',
+  # Example AWS account IDs in docs
+  '''123456789012''',
+  # Terraform interpolation syntax
+  '''\$\{var\..*\}''',
+]

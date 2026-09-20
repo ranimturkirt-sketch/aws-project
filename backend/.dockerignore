@@ -1,0 +1,13 @@
+node_modules
+dist
+coverage
+.git
+.gitignore
+*.md
+.env*
+.eslintrc*
+jest.config*
+tsconfig.json
+tests
+.DS_Store
+Thumbs.db

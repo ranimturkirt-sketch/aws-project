@@ -1,0 +1,1147 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guide de Mise en Place — DevSecOps AWS</title>
+    <meta name="description" content="Guide étape par étape pour déployer un projet DevSecOps complet sur AWS avec Terraform, Docker, ECS Fargate, et GitHub Actions.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+    :root {
+        --bg-primary: #0a0a14;
+        --bg-secondary: #12121f;
+        --bg-card: #1a1a2e;
+        --bg-card-hover: #222240;
+        --bg-sidebar: #0e0e1a;
+        --bg-code: #1e1e32;
+        --bg-glass: rgba(255,255,255,0.04);
+        --border: rgba(255,255,255,0.08);
+        --border-active: rgba(108,99,255,0.5);
+        --text-primary: #e8e8f0;
+        --text-secondary: #9d9db5;
+        --text-muted: #6b6b82;
+        --accent: #6c63ff;
+        --accent-2: #00d4aa;
+        --accent-3: #ff6b9d;
+        --gradient: linear-gradient(135deg, #6c63ff 0%, #00d4aa 100%);
+        --gradient-warm: linear-gradient(135deg, #ff6b9d 0%, #ffa502 100%);
+        --danger: #ff4757;
+        --warning: #ffa502;
+        --success: #2ed573;
+        --info: #3498db;
+        --shadow: 0 4px 20px rgba(0,0,0,0.4);
+        --shadow-lg: 0 8px 40px rgba(0,0,0,0.5);
+        --radius: 12px;
+        --radius-lg: 20px;
+        --font: 'Inter', -apple-system, sans-serif;
+        --mono: 'JetBrains Mono', monospace;
+        --sidebar-width: 300px;
+        --topbar-height: 64px;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+
+    body {
+        font-family: var(--font);
+        background: var(--bg-primary);
+        color: var(--text-primary);
+        line-height: 1.7;
+        overflow-x: hidden;
+    }
+
+    /* ── Top Bar ─────────────────────────────────────────────────── */
+    .topbar {
+        position: fixed; top: 0; left: 0; right: 0;
+        height: var(--topbar-height);
+        background: rgba(10,10,20,0.92);
+        backdrop-filter: blur(24px) saturate(180%);
+        border-bottom: 1px solid var(--border);
+        display: flex; align-items: center;
+        padding: 0 2rem; z-index: 1000;
+    }
+
+    .topbar-brand {
+        display: flex; align-items: center; gap: 0.75rem;
+        font-weight: 700; font-size: 1.05rem;
+        text-decoration: none;
+    }
+
+    .topbar-brand .icon {
+        width: 38px; height: 38px; border-radius: 10px;
+        background: var(--gradient);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.1rem; color: #fff; font-weight: 800;
+        box-shadow: 0 2px 12px rgba(108,99,255,0.4);
+    }
+
+    .topbar-brand span {
+        background: var(--gradient);
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .topbar-right {
+        margin-left: auto;
+        display: flex; align-items: center; gap: 1.5rem;
+    }
+
+    .topbar-progress {
+        display: flex; align-items: center; gap: 0.75rem;
+        color: var(--text-muted); font-size: 0.8rem;
+    }
+
+    .progress-track {
+        width: 140px; height: 5px;
+        background: var(--bg-card);
+        border-radius: 5px; overflow: hidden;
+    }
+
+    .progress-fill {
+        height: 100%; background: var(--gradient);
+        border-radius: 5px; transition: width 0.6s ease;
+        width: 0%;
+    }
+
+    .progress-label {
+        font-size: 0.75rem; color: var(--accent);
+        font-weight: 600;
+    }
+
+    .hamburger {
+        display: none; background: none; border: none;
+        color: var(--text-primary); font-size: 1.5rem;
+        cursor: pointer; margin-right: 1rem;
+    }
+
+    .back-link {
+        color: var(--text-muted); text-decoration: none;
+        font-size: 0.8rem; transition: color 0.2s;
+        display: flex; align-items: center; gap: 0.25rem;
+    }
+    .back-link:hover { color: var(--accent); }
+
+    /* ── Sidebar ─────────────────────────────────────────────────── */
+    .sidebar {
+        position: fixed; top: var(--topbar-height);
+        left: 0; bottom: 0; width: var(--sidebar-width);
+        background: var(--bg-sidebar);
+        border-right: 1px solid var(--border);
+        overflow-y: auto; z-index: 900;
+        padding: 1.5rem 0;
+        transition: transform 0.3s ease;
+    }
+
+    .sidebar::-webkit-scrollbar { width: 4px; }
+    .sidebar::-webkit-scrollbar-track { background: transparent; }
+    .sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    .sidebar-header {
+        padding: 0 1.5rem 1rem;
+        border-bottom: 1px solid var(--border);
+        margin-bottom: 1rem;
+    }
+
+    .sidebar-header h2 {
+        font-size: 0.9rem; font-weight: 700;
+        color: var(--text-primary);
+        border: none; margin: 0; padding: 0;
+    }
+
+    .sidebar-header p {
+        font-size: 0.7rem; color: var(--text-muted);
+        margin-top: 0.25rem;
+    }
+
+    .sidebar-section { padding: 0.5rem 1rem; }
+    .sidebar-title {
+        font-size: 0.6rem; font-weight: 700;
+        text-transform: uppercase; letter-spacing: 2px;
+        color: var(--text-muted); margin-bottom: 0.5rem;
+        padding: 0 0.5rem;
+    }
+
+    .sidebar-nav { list-style: none; }
+
+    .sidebar-nav a {
+        display: flex; align-items: center; gap: 0.75rem;
+        padding: 0.55rem 0.75rem; margin: 2px 0;
+        border-radius: 8px; text-decoration: none;
+        color: var(--text-secondary); font-size: 0.8rem;
+        font-weight: 500; transition: all 0.2s ease;
+        line-height: 1.3;
+    }
+
+    .sidebar-nav a:hover {
+        background: var(--bg-glass);
+        color: var(--text-primary);
+    }
+
+    .sidebar-nav a.active {
+        background: rgba(108,99,255,0.12);
+        color: var(--accent);
+    }
+
+    .step-num {
+        min-width: 26px; height: 26px; border-radius: 7px;
+        background: var(--bg-card); display: flex;
+        align-items: center; justify-content: center;
+        font-size: 0.65rem; font-weight: 700; flex-shrink: 0;
+        transition: all 0.2s;
+    }
+
+    .sidebar-nav a.active .step-num {
+        background: var(--accent); color: #fff;
+        box-shadow: 0 2px 8px rgba(108,99,255,0.4);
+    }
+
+    .sidebar-nav a.completed .step-num {
+        background: var(--success); color: #fff;
+    }
+
+    .sidebar-nav a.completed .step-num::after {
+        content: '✓';
+    }
+
+    .step-duration {
+        margin-left: auto; font-size: 0.6rem;
+        color: var(--text-muted); font-weight: 400;
+        white-space: nowrap;
+    }
+
+    /* ── Main Content ────────────────────────────────────────────── */
+    .main {
+        margin-left: var(--sidebar-width);
+        margin-top: var(--topbar-height);
+        min-height: calc(100vh - var(--topbar-height));
+        padding: 2.5rem 3.5rem 4rem;
+        max-width: 960px;
+    }
+
+    /* ── Hero ─────────────────────────────────────────────────────── */
+    .hero {
+        background: var(--gradient);
+        border-radius: var(--radius-lg);
+        padding: 3rem 3rem 2.5rem;
+        margin-bottom: 3rem;
+        position: relative; overflow: hidden;
+    }
+
+    .hero::before {
+        content: ''; position: absolute;
+        top: -60%; right: -15%; width: 450px; height: 450px;
+        background: rgba(255,255,255,0.07);
+        border-radius: 50%; filter: blur(80px);
+    }
+
+    .hero::after {
+        content: ''; position: absolute;
+        bottom: -40%; left: -10%; width: 300px; height: 300px;
+        background: rgba(0,212,170,0.15);
+        border-radius: 50%; filter: blur(60px);
+    }
+
+    .hero > * { position: relative; z-index: 1; }
+
+    .hero-badge {
+        display: inline-block;
+        padding: 0.3rem 0.8rem;
+        background: rgba(255,255,255,0.15);
+        border-radius: 20px; font-size: 0.7rem;
+        font-weight: 700; letter-spacing: 1px;
+        text-transform: uppercase; color: #fff;
+        margin-bottom: 1rem;
+        backdrop-filter: blur(10px);
+    }
+
+    .hero h1 {
+        font-size: 2.2rem; font-weight: 800;
+        margin-bottom: 0.75rem; color: #fff;
+        line-height: 1.2;
+    }
+
+    .hero p {
+        font-size: 1.05rem; opacity: 0.92;
+        max-width: 550px; color: rgba(255,255,255,0.92);
+        line-height: 1.6;
+    }
+
+    .hero-stats {
+        display: flex; gap: 2rem; margin-top: 1.5rem;
+        flex-wrap: wrap;
+    }
+
+    .hero-stat {
+        display: flex; flex-direction: column;
+    }
+
+    .hero-stat-value {
+        font-size: 1.5rem; font-weight: 800; color: #fff;
+    }
+
+    .hero-stat-label {
+        font-size: 0.7rem; color: rgba(255,255,255,0.7);
+        text-transform: uppercase; letter-spacing: 0.5px;
+    }
+
+    /* ── Section ──────────────────────────────────────────────────── */
+    .section {
+        margin-bottom: 3rem;
+        scroll-margin-top: calc(var(--topbar-height) + 1rem);
+    }
+
+    .section-header {
+        display: flex; align-items: center; gap: 1rem;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid var(--border);
+    }
+
+    .section-number {
+        min-width: 44px; height: 44px; border-radius: 12px;
+        background: var(--gradient);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1rem; font-weight: 800; color: #fff;
+        box-shadow: 0 4px 16px rgba(108,99,255,0.3);
+        flex-shrink: 0;
+    }
+
+    .section-title {
+        font-size: 1.4rem; font-weight: 700;
+        border: none; margin: 0; padding: 0;
+    }
+
+    .section-meta {
+        display: flex; gap: 1rem; margin-top: 0.25rem;
+        font-size: 0.7rem; color: var(--text-muted);
+    }
+
+    .section-meta span {
+        display: flex; align-items: center; gap: 0.3rem;
+    }
+
+    /* ── Subsection ───────────────────────────────────────────────── */
+    h3 {
+        font-size: 1.05rem; font-weight: 600;
+        margin: 2rem 0 0.75rem; color: var(--accent);
+    }
+
+    h4 {
+        font-size: 0.9rem; font-weight: 600;
+        margin: 1.25rem 0 0.5rem; color: var(--text-primary);
+    }
+
+    p { margin-bottom: 0.75rem; color: var(--text-secondary); font-size: 0.9rem; }
+
+    ul, ol {
+        margin: 0.75rem 0 1rem 1.5rem;
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+    }
+
+    li { margin-bottom: 0.3rem; }
+    li code { font-size: 0.8rem; }
+
+    /* ── Terminal ─────────────────────────────────────────────────── */
+    .terminal {
+        background: var(--bg-code);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        margin: 1rem 0 1.5rem; overflow: hidden;
+    }
+
+    .terminal-header {
+        display: flex; align-items: center;
+        padding: 0.55rem 1rem;
+        background: rgba(255,255,255,0.02);
+        border-bottom: 1px solid var(--border);
+    }
+
+    .terminal-dots { display: flex; gap: 6px; }
+    .terminal-dots span { width: 10px; height: 10px; border-radius: 50%; }
+    .terminal-dots span:nth-child(1) { background: #ff5f57; }
+    .terminal-dots span:nth-child(2) { background: #ffbd2e; }
+    .terminal-dots span:nth-child(3) { background: #28ca41; }
+
+    .terminal-title {
+        margin-left: 0.75rem; font-size: 0.7rem;
+        color: var(--text-muted); font-family: var(--mono);
+    }
+
+    .terminal-copy {
+        margin-left: auto; background: none; border: 1px solid var(--border);
+        color: var(--text-muted); padding: 0.2rem 0.5rem;
+        border-radius: 4px; font-size: 0.65rem; cursor: pointer;
+        font-family: var(--font); transition: all 0.2s;
+    }
+
+    .terminal-copy:hover { color: var(--accent); border-color: var(--accent); }
+    .terminal-copy.copied { color: var(--success); border-color: var(--success); }
+
+    .terminal pre {
+        padding: 1rem 1.25rem; margin: 0;
+        font-family: var(--mono); font-size: 0.8rem;
+        line-height: 1.7; overflow-x: auto;
+        color: var(--text-primary); white-space: pre;
+    }
+
+    .terminal pre .prompt { color: var(--accent-2); font-weight: 600; }
+    .terminal pre .comment { color: var(--text-muted); font-style: italic; }
+    .terminal pre .output { color: var(--text-muted); }
+    .terminal pre .highlight { color: var(--accent); font-weight: 600; }
+    .terminal pre .success { color: var(--success); }
+    .terminal pre .warning { color: var(--warning); }
+
+    /* ── Callouts ─────────────────────────────────────────────────── */
+    .callout {
+        border-radius: var(--radius);
+        padding: 1rem 1.25rem;
+        margin: 1.25rem 0;
+        border-left: 4px solid;
+        display: flex; gap: 0.75rem;
+    }
+
+    .callout-icon { font-size: 1.1rem; flex-shrink: 0; margin-top: 1px; }
+    .callout-content { flex: 1; }
+    .callout-title { font-weight: 700; font-size: 0.8rem; margin-bottom: 0.15rem; }
+    .callout-text { font-size: 0.8rem; color: var(--text-secondary); line-height: 1.5; }
+    .callout-text code { font-size: 0.75rem; }
+
+    .callout-info { background: rgba(52,152,219,0.07); border-color: var(--info); }
+    .callout-info .callout-title { color: var(--info); }
+    .callout-warning { background: rgba(255,165,2,0.07); border-color: var(--warning); }
+    .callout-warning .callout-title { color: var(--warning); }
+    .callout-danger { background: rgba(255,71,87,0.07); border-color: var(--danger); }
+    .callout-danger .callout-title { color: var(--danger); }
+    .callout-success { background: rgba(46,213,115,0.07); border-color: var(--success); }
+    .callout-success .callout-title { color: var(--success); }
+    .callout-tip { background: rgba(0,212,170,0.07); border-color: var(--accent-2); }
+    .callout-tip .callout-title { color: var(--accent-2); }
+
+    /* ── Checkpoint ───────────────────────────────────────────────── */
+    .checkpoint {
+        background: rgba(46,213,115,0.06);
+        border: 1px solid rgba(46,213,115,0.2);
+        border-radius: var(--radius);
+        padding: 1.25rem 1.5rem;
+        margin: 2rem 0;
+        display: flex; align-items: flex-start; gap: 0.75rem;
+    }
+
+    .checkpoint-icon {
+        width: 32px; height: 32px; border-radius: 50%;
+        background: var(--success); display: flex;
+        align-items: center; justify-content: center;
+        font-size: 0.9rem; flex-shrink: 0;
+        box-shadow: 0 2px 8px rgba(46,213,115,0.3);
+    }
+
+    .checkpoint-text {
+        font-weight: 600; font-size: 0.85rem;
+        color: var(--success);
+    }
+
+    .checkpoint-desc {
+        font-size: 0.8rem; color: var(--text-secondary);
+        margin-top: 0.15rem;
+    }
+
+    /* ── Tables ───────────────────────────────────────────────────── */
+    table {
+        width: 100%; border-collapse: collapse;
+        margin: 1rem 0 1.5rem; font-size: 0.8rem;
+    }
+
+    th, td {
+        padding: 0.6rem 0.75rem; text-align: left;
+        border-bottom: 1px solid var(--border);
+    }
+
+    th {
+        background: var(--bg-card); font-weight: 600;
+        font-size: 0.7rem; text-transform: uppercase;
+        letter-spacing: 0.5px; color: var(--text-muted);
+    }
+
+    td { color: var(--text-secondary); }
+    tr:hover td { background: var(--bg-glass); }
+
+    /* ── Code inline ──────────────────────────────────────────────── */
+    code {
+        font-family: var(--mono);
+        background: var(--bg-code);
+        padding: 0.15rem 0.4rem;
+        border-radius: 4px;
+        font-size: 0.78em;
+        color: var(--accent-3);
+    }
+
+    /* ── Flow diagram ─────────────────────────────────────────────── */
+    .flow-diagram {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 1.5rem;
+        margin: 1.5rem 0;
+        overflow-x: auto;
+    }
+
+    .flow-diagram pre {
+        font-family: var(--mono); font-size: 0.75rem;
+        line-height: 1.5; color: var(--text-secondary);
+        margin: 0; white-space: pre;
+    }
+
+    .flow-diagram .title {
+        font-size: 0.65rem; text-transform: uppercase;
+        letter-spacing: 1px; color: var(--text-muted);
+        margin-bottom: 0.75rem; font-family: var(--font);
+        font-weight: 600;
+    }
+
+    /* ── Nav buttons ──────────────────────────────────────────────── */
+    .nav-buttons {
+        display: flex; justify-content: space-between;
+        margin-top: 3rem; padding-top: 2rem;
+        border-top: 1px solid var(--border);
+    }
+
+    .nav-btn {
+        padding: 0.7rem 1.25rem; border-radius: 8px;
+        text-decoration: none; font-weight: 600;
+        font-size: 0.82rem; transition: all 0.2s;
+        border: 1px solid var(--border);
+        color: var(--text-secondary);
+        display: flex; align-items: center; gap: 0.4rem;
+    }
+
+    .nav-btn:hover {
+        border-color: var(--accent); color: var(--accent);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(108,99,255,0.15);
+    }
+
+    .nav-btn-next {
+        background: var(--gradient); border: none;
+        color: #fff;
+    }
+
+    .nav-btn-next:hover {
+        color: #fff; transform: translateY(-2px);
+        box-shadow: 0 4px 16px rgba(108,99,255,0.4);
+    }
+
+    /* ── Responsive ───────────────────────────────────────────────── */
+    @media (max-width: 900px) {
+        .sidebar { transform: translateX(-100%); }
+        .sidebar.open { transform: translateX(0); }
+        .main { margin-left: 0; padding: 1.5rem 1.25rem 3rem; }
+        .hamburger { display: block; }
+        .hero { padding: 2rem 1.5rem; }
+        .hero h1 { font-size: 1.6rem; }
+        .hero-stats { gap: 1.5rem; }
+        .section-header { flex-direction: column; gap: 0.5rem; }
+        .terminal pre { font-size: 0.72rem; }
+    }
+
+    @media (max-width: 480px) {
+        .hero-stats { flex-direction: column; gap: 0.75rem; }
+    }
+    </style>
+</head>
+<body>
+
+<!-- ═══ Top Bar ════════════════════════════════════════════════════ -->
+<div class="topbar">
+    <button class="hamburger" onclick="toggleSidebar()">☰</button>
+    <a href="index.html" class="topbar-brand">
+        <div class="icon">⚡</div>
+        <span>DevSecOps AWS</span>
+    </a>
+    <div class="topbar-right">
+        <a href="index.html" class="back-link">← Retour au cours</a>
+        <div class="topbar-progress">
+            <span class="progress-label" id="progressLabel">0 / 15</span>
+            <div class="progress-track">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ Sidebar ═══════════════════════════════════════════════════ -->
+<nav class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+        <h2>📘 Guide de Mise en Place</h2>
+        <p>15 étapes • ~2 heures</p>
+    </div>
+
+    <div class="sidebar-section">
+        <div class="sidebar-title">Préparation</div>
+        <ul class="sidebar-nav">
+            <li><a href="#step-1"><span class="step-num">1</span> Prérequis <span class="step-duration">15 min</span></a></li>
+            <li><a href="#step-2"><span class="step-num">2</span> Structure du projet <span class="step-duration">5 min</span></a></li>
+            <li><a href="#step-3"><span class="step-num">3</span> AWS CLI <span class="step-duration">5 min</span></a></li>
+        </ul>
+    </div>
+
+    <div class="sidebar-section">
+        <div class="sidebar-title">Infrastructure</div>
+        <ul class="sidebar-nav">
+            <li><a href="#step-4"><span class="step-num">4</span> Bootstrap Terraform <span class="step-duration">5 min</span></a></li>
+            <li><a href="#step-5"><span class="step-num">5</span> Déployer l'infra <span class="step-duration">20 min</span></a></li>
+            <li><a href="#step-6"><span class="step-num">6</span> Premier push Docker <span class="step-duration">10 min</span></a></li>
+        </ul>
+    </div>
+
+    <div class="sidebar-section">
+        <div class="sidebar-title">CI/CD</div>
+        <ul class="sidebar-nav">
+            <li><a href="#step-7"><span class="step-num">7</span> GitHub OIDC <span class="step-duration">10 min</span></a></li>
+            <li><a href="#step-8"><span class="step-num">8</span> Deploy backend <span class="step-duration">10 min</span></a></li>
+            <li><a href="#step-9"><span class="step-num">9</span> Deploy frontend <span class="step-duration">5 min</span></a></li>
+        </ul>
+    </div>
+
+    <div class="sidebar-section">
+        <div class="sidebar-title">Validation</div>
+        <ul class="sidebar-nav">
+            <li><a href="#step-10"><span class="step-num">10</span> Vérification <span class="step-duration">10 min</span></a></li>
+            <li><a href="#step-11"><span class="step-num">11</span> Tester CI/CD <span class="step-duration">10 min</span></a></li>
+            <li><a href="#step-12"><span class="step-num">12</span> Sécurité <span class="step-duration">10 min</span></a></li>
+        </ul>
+    </div>
+
+    <div class="sidebar-section">
+        <div class="sidebar-title">Opérations</div>
+        <ul class="sidebar-nav">
+            <li><a href="#step-13"><span class="step-num">13</span> Monitoring <span class="step-duration">5 min</span></a></li>
+            <li><a href="#step-14"><span class="step-num">14</span> Destruction LAB <span class="step-duration">15 min</span></a></li>
+            <li><a href="#step-15"><span class="step-num">15</span> Coûts & bilan <span class="step-duration">5 min</span></a></li>
+        </ul>
+    </div>
+</nav>
+
+<!-- ═══ Main Content ══════════════════════════════════════════════ -->
+<div class="main">
+
+    <!-- Hero -->
+    <div class="hero">
+        <div class="hero-badge">Guide complet</div>
+        <h1>📘 Guide de Mise en Place</h1>
+        <p>Suivez ce guide étape par étape pour déployer l'ensemble du projet DevSecOps AWS, de la préparation jusqu'à la mise en production.</p>
+        <div class="hero-stats">
+            <div class="hero-stat">
+                <span class="hero-stat-value">15</span>
+                <span class="hero-stat-label">Étapes</span>
+            </div>
+            <div class="hero-stat">
+                <span class="hero-stat-value">~2h</span>
+                <span class="hero-stat-label">Durée totale</span>
+            </div>
+            <div class="hero-stat">
+                <span class="hero-stat-value">132</span>
+                <span class="hero-stat-label">Fichiers</span>
+            </div>
+            <div class="hero-stat">
+                <span class="hero-stat-value">10</span>
+                <span class="hero-stat-label">Modules TF</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ STEP 1 ═══════════════════════════════════════════════ -->
+    <div class="section" id="step-1">
+        <div class="section-header">
+            <div class="section-number">1</div>
+            <div>
+                <div class="section-title">Prérequis et préparation</div>
+                <div class="section-meta">
+                    <span>⏱️ ~15 minutes</span>
+                    <span>📋 Installation des outils</span>
+                </div>
+            </div>
+        </div>
+
+        <h3>Installer les outils requis</h3>
+
+        <div class="terminal">
+            <div class="terminal-header">
+                <div class="terminal-dots"><span></span><span></span><span></span></div>
+                <span class="terminal-title">macOS (Homebrew)</span>
+                <button class="terminal-copy" onclick="copyCode(this)">Copier</button>
+            </div>
+            <pre><span class="comment"># Installer les outils nécessaires</span>
+<span class="prompt">$</span> brew install awscli        <span class="comment"># AWS CLI v2</span>
+<span class="prompt">$</span> brew install terraform     <span class="comment"># Terraform 1.5+</span>
+<span class="prompt">$</span> brew install node          <span class="comment"># Node.js 20+</span>
+<span class="prompt">$</span> brew install git           <span class="comment"># Git</span>
+<span class="prompt">$</span> brew install jq            <span class="comment"># JSON processor</span>
+<span class="comment"># + Docker Desktop depuis docker.com</span></pre>
+        </div>
+
+        <h3>Vérifier les versions</h3>
+
+        <div class="terminal">
+            <div class="terminal-header">
+                <div class="terminal-dots"><span></span><span></span><span></span></div>
+                <span class="terminal-title">Vérifications</span>
+                <button class="terminal-copy" onclick="copyCode(this)">Copier</button>
+            </div>
+            <pre><span class="prompt">$</span> aws --version          <span class="output"># aws-cli/2.x.x</span>
+<span class="prompt">$</span> terraform --version    <span class="output"># Terraform v1.5+</span>
+<span class="prompt">$</span> node --version         <span class="output"># v20.x.x</span>
+<span class="prompt">$</span> docker --version       <span class="output"># Docker version 24+</span>
+<span class="prompt">$</span> git --version          <span class="output"># git version 2.x</span></pre>
+        </div>
+
+        <h3>Créer un utilisateur IAM temporaire</h3>
+        <p>Le bootstrap initial nécessite un utilisateur IAM avec des permissions administrateur.</p>
+        <ol>
+            <li>Aller dans <strong>AWS Console → IAM → Users → Create user</strong></li>
+            <li>Nom : <code>terraform-bootstrap</code></li>
+            <li>Attacher la policy <code>AdministratorAccess</code></li>
+            <li>Créer des <strong>Access Keys</strong> (CLI)</li>
+            <li>Notez la <code>AWS_ACCESS_KEY_ID</code> et la <code>AWS_SECRET_ACCESS_KEY</code></li>
+        </ol>
+
+        <div class="callout callout-danger">
+            <span class="callout-icon">🔒</span>
+            <div class="callout-content">
+                <div class="callout-title">Sécurité</div>
+                <div class="callout-text">Cet utilisateur est <strong>temporaire</strong>. Après la mise en place d'OIDC (étape 7), vous supprimerez ces clés. Les pipelines CI/CD utiliseront OIDC, sans aucune clé permanente.</div>
+            </div>
+        </div>
+
+        <div class="checkpoint">
+            <div class="checkpoint-icon">✓</div>
+            <div>
+                <div class="checkpoint-text">Checkpoint — Outils installés</div>
+                <div class="checkpoint-desc">AWS CLI, Terraform, Node.js, Docker et Git sont installés et fonctionnels.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ STEP 4 ═══════════════════════════════════════════════ -->
+    <div class="section" id="step-4">
+        <div class="section-header">
+            <div class="section-number">4</div>
+            <div>
+                <div class="section-title">Bootstrap Terraform — Remote State</div>
+                <div class="section-meta">
+                    <span>⏱️ ~5 minutes</span>
+                    <span>🗄️ S3 + DynamoDB</span>
+                </div>
+            </div>
+        </div>
+
+        <h3>Pourquoi un bootstrap ?</h3>
+        <p>Terraform stocke l'état de l'infrastructure dans un fichier <code>terraform.tfstate</code>. Le remote state le stocke dans S3 (avec versioning et chiffrement) et utilise DynamoDB pour le locking.</p>
+
+        <div class="terminal">
+            <div class="terminal-header">
+                <div class="terminal-dots"><span></span><span></span><span></span></div>
+                <span class="terminal-title">Bootstrap</span>
+                <button class="terminal-copy" onclick="copyCode(this)">Copier</button>
+            </div>
+            <pre><span class="comment"># Aller dans le dossier bootstrap</span>
+<span class="prompt">$</span> cd terraform/bootstrap
+
+<span class="comment"># Initialiser Terraform</span>
+<span class="prompt">$</span> terraform init
+<span class="output">Initializing the backend...
+Terraform has been successfully initialized!</span>
+
+<span class="comment"># Prévisualiser les changements</span>
+<span class="prompt">$</span> terraform plan
+<span class="output">Plan: 5 to add, 0 to change, 0 to destroy.</span>
+
+<span class="comment"># Appliquer (tapez 'yes')</span>
+<span class="prompt">$</span> terraform apply
+<span class="success">Apply complete! Resources: 5 added.</span>
+
+<span class="comment"># Vérifier</span>
+<span class="prompt">$</span> aws s3 ls | grep taskmanager-terraform-state
+<span class="prompt">$</span> cd ../..</pre>
+        </div>
+
+        <div class="checkpoint">
+            <div class="checkpoint-icon">✓</div>
+            <div>
+                <div class="checkpoint-text">Checkpoint — Remote state prêt</div>
+                <div class="checkpoint-desc">Bucket S3 et table DynamoDB créés. Terraform peut stocker son état de manière sécurisée.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ STEP 5 ═══════════════════════════════════════════════ -->
+    <div class="section" id="step-5">
+        <div class="section-header">
+            <div class="section-number">5</div>
+            <div>
+                <div class="section-title">Déployer l'infrastructure avec Terraform</div>
+                <div class="section-meta">
+                    <span>⏱️ ~20 minutes</span>
+                    <span>🏗️ 10 modules AWS</span>
+                </div>
+            </div>
+        </div>
+
+        <h3>Modules déployés</h3>
+        <table>
+            <thead><tr><th>#</th><th>Module</th><th>Ressources créées</th></tr></thead>
+            <tbody>
+                <tr><td>1</td><td><code>network</code></td><td>VPC + 4 subnets + IGW + NAT</td></tr>
+                <tr><td>2</td><td><code>security</code></td><td>3 Security Groups (ALB→ECS→RDS)</td></tr>
+                <tr><td>3</td><td><code>ecr</code></td><td>Registry Docker (immutable tags, scan on push)</td></tr>
+                <tr><td>4</td><td><code>monitoring</code></td><td>CloudWatch Log Group</td></tr>
+                <tr><td>5</td><td><code>rds</code></td><td>PostgreSQL + Secret auto dans Secrets Manager</td></tr>
+                <tr><td>6</td><td><code>secrets</code></td><td>Data source du secret RDS</td></tr>
+                <tr><td>7</td><td><code>alb</code></td><td>Load Balancer + Target Group + Listeners</td></tr>
+                <tr><td>8</td><td><code>ecs</code></td><td>Cluster + Task Definition + Service</td></tr>
+                <tr><td>9</td><td><code>frontend</code></td><td>S3 (privé) + CloudFront (OAC)</td></tr>
+                <tr><td>10</td><td><code>github-oidc</code></td><td>OIDC Provider + 2 IAM Roles</td></tr>
+            </tbody>
+        </table>
+
+        <div class="terminal">
+            <div class="terminal-header">
+                <div class="terminal-dots"><span></span><span></span><span></span></div>
+                <span class="terminal-title">Déploiement infrastructure</span>
+                <button class="terminal-copy" onclick="copyCode(this)">Copier</button>
+            </div>
+            <pre><span class="prompt">$</span> cd terraform/environments/dev
+
+<span class="comment"># Initialiser (télécharge modules + providers)</span>
+<span class="prompt">$</span> terraform init
+
+<span class="comment"># Valider la syntaxe</span>
+<span class="prompt">$</span> terraform validate
+<span class="success">Success! The configuration is valid.</span>
+
+<span class="comment"># Planifier (prévisualiser ~40 ressources)</span>
+<span class="prompt">$</span> terraform plan -out=tfplan
+
+<span class="comment"># Appliquer (~10-15 minutes)</span>
+<span class="prompt">$</span> terraform apply tfplan
+
+<span class="comment"># Récupérer les outputs importants</span>
+<span class="prompt">$</span> terraform output
+<span class="highlight">alb_dns_name</span> = "taskmanager-dev-alb-xxx.eu-west-3.elb.amazonaws.com"
+<span class="highlight">cloudfront_domain_name</span> = "d1abc2def3gh4i.cloudfront.net"
+<span class="highlight">ecr_repository_url</span> = "123456789012.dkr.ecr.eu-west-3.amazonaws.com/taskmanager-backend"
+<span class="highlight">github_terraform_role_arn</span> = "arn:aws:iam::123456789012:role/..."
+<span class="highlight">github_deploy_role_arn</span> = "arn:aws:iam::123456789012:role/..."</pre>
+        </div>
+
+        <div class="callout callout-warning">
+            <span class="callout-icon">⏱️</span>
+            <div class="callout-content">
+                <div class="callout-title">Durée du déploiement</div>
+                <div class="callout-text">Le déploiement prend <strong>10-15 minutes</strong>. Le plus long est RDS (~5-8 min) et CloudFront (~3-5 min). Soyez patient.</div>
+            </div>
+        </div>
+
+        <div class="checkpoint">
+            <div class="checkpoint-icon">✓</div>
+            <div>
+                <div class="checkpoint-text">Checkpoint — Infrastructure AWS déployée</div>
+                <div class="checkpoint-desc">VPC, subnets, ALB, ECS, RDS, S3, CloudFront, ECR, OIDC — tout est prêt.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ STEP 7 ═══════════════════════════════════════════════ -->
+    <div class="section" id="step-7">
+        <div class="section-header">
+            <div class="section-number">7</div>
+            <div>
+                <div class="section-title">Configurer GitHub OIDC et les Variables</div>
+                <div class="section-meta">
+                    <span>⏱️ ~10 minutes</span>
+                    <span>🔑 Authentification sans clés</span>
+                </div>
+            </div>
+        </div>
+
+        <h3>Configurer les Variables GitHub Actions</h3>
+        <p>Allez dans <strong>Settings → Secrets and variables → Actions → Variables</strong> de votre repository GitHub et ajoutez :</p>
+
+        <table>
+            <thead><tr><th>Variable</th><th>Description</th><th>Source</th></tr></thead>
+            <tbody>
+                <tr><td><code>AWS_ROLE_ARN_TERRAFORM</code></td><td>Rôle IAM pour Terraform</td><td><code>terraform output github_terraform_role_arn</code></td></tr>
+                <tr><td><code>AWS_ROLE_ARN_DEPLOY</code></td><td>Rôle IAM pour déploiement</td><td><code>terraform output github_deploy_role_arn</code></td></tr>
+                <tr><td><code>FRONTEND_BUCKET</code></td><td>Nom du bucket S3</td><td><code>terraform output frontend_bucket_name</code></td></tr>
+                <tr><td><code>CLOUDFRONT_DISTRIBUTION_ID</code></td><td>ID de la distribution CF</td><td><code>terraform output cloudfront_distribution_id</code></td></tr>
+                <tr><td><code>CLOUDFRONT_DOMAIN</code></td><td>Domaine CloudFront</td><td><code>terraform output cloudfront_domain_name</code></td></tr>
+                <tr><td><code>ALB_DNS_NAME</code></td><td>DNS de l'ALB</td><td><code>terraform output alb_dns_name</code></td></tr>
+                <tr><td><code>ECS_CLUSTER_NAME</code></td><td>Nom du cluster ECS</td><td><code>terraform output ecs_cluster_name</code></td></tr>
+                <tr><td><code>ECS_SERVICE_NAME</code></td><td>Nom du service ECS</td><td><code>terraform output ecs_service_name</code></td></tr>
+                <tr><td><code>ECS_TASK_FAMILY</code></td><td>Famille de la task def</td><td><code>taskmanager-dev-backend</code></td></tr>
+                <tr><td><code>API_URL</code></td><td>URL de l'API</td><td><code>http://ALB_DNS_NAME</code></td></tr>
+            </tbody>
+        </table>
+
+        <div class="callout callout-tip">
+            <span class="callout-icon">💡</span>
+            <div class="callout-content">
+                <div class="callout-title">Astuce</div>
+                <div class="callout-text">Ce sont des <strong>Variables</strong> (pas des Secrets). Avec OIDC, aucun secret AWS n'est nécessaire dans GitHub.</div>
+            </div>
+        </div>
+
+        <div class="checkpoint">
+            <div class="checkpoint-icon">✓</div>
+            <div>
+                <div class="checkpoint-text">Checkpoint — GitHub OIDC configuré</div>
+                <div class="checkpoint-desc">GitHub Actions peut maintenant s'authentifier à AWS via OIDC, sans aucune clé permanente.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ STEP 10 ══════════════════════════════════════════════ -->
+    <div class="section" id="step-10">
+        <div class="section-header">
+            <div class="section-number">10</div>
+            <div>
+                <div class="section-title">Vérification complète du déploiement</div>
+                <div class="section-meta">
+                    <span>⏱️ ~10 minutes</span>
+                    <span>✅ Test end-to-end</span>
+                </div>
+            </div>
+        </div>
+
+        <h3>Test end-to-end</h3>
+
+        <div class="terminal">
+            <div class="terminal-header">
+                <div class="terminal-dots"><span></span><span></span><span></span></div>
+                <span class="terminal-title">Test E2E complet</span>
+                <button class="terminal-copy" onclick="copyCode(this)">Copier</button>
+            </div>
+            <pre><span class="comment"># 1. Health check</span>
+<span class="prompt">$</span> curl http://$ALB_DNS/health
+<span class="success">{"status":"healthy","timestamp":"...","environment":"production"}</span>
+
+<span class="comment"># 2. Créer une tâche</span>
+<span class="prompt">$</span> curl -X POST http://$ALB_DNS/api/tasks \
+  -H "Content-Type: application/json" \
+  -d '{"title":"Ma première tâche","description":"Test DevSecOps"}'
+<span class="success">{"id":1,"title":"Ma première tâche",...}</span>
+
+<span class="comment"># 3. Lister les tâches</span>
+<span class="prompt">$</span> curl http://$ALB_DNS/api/tasks
+<span class="success">[{"id":1,"title":"Ma première tâche",...}]</span>
+
+<span class="comment"># 4. Tester le frontend</span>
+<span class="prompt">$</span> curl -s -o /dev/null -w "%{http_code}" https://$CF_DOMAIN
+<span class="success">200</span>
+
+<span class="comment"># 5. Ouvrir dans le navigateur</span>
+<span class="prompt">$</span> open https://$CF_DOMAIN</pre>
+        </div>
+
+        <h3>Checklist de vérification</h3>
+        <table>
+            <thead><tr><th>Composant</th><th>État attendu</th><th>Commande</th></tr></thead>
+            <tbody>
+                <tr><td>VPC</td><td>Actif</td><td><code>aws ec2 describe-vpcs --filters "Name=tag:Project,Values=taskmanager"</code></td></tr>
+                <tr><td>ALB</td><td>HTTP 200 sur /health</td><td><code>curl http://$ALB_DNS/health</code></td></tr>
+                <tr><td>ECS</td><td>1 task running</td><td><code>aws ecs describe-services ...</code></td></tr>
+                <tr><td>RDS</td><td>available</td><td><code>aws rds describe-db-instances ...</code></td></tr>
+                <tr><td>Frontend</td><td>HTTP 200</td><td><code>curl https://$CF_DOMAIN</code></td></tr>
+                <tr><td>ECR</td><td>Image présente</td><td><code>aws ecr describe-images ...</code></td></tr>
+            </tbody>
+        </table>
+
+        <div class="checkpoint">
+            <div class="checkpoint-icon">✓</div>
+            <div>
+                <div class="checkpoint-text">Checkpoint — Application déployée et fonctionnelle</div>
+                <div class="checkpoint-desc">Frontend sur CloudFront, Backend sur ECS Fargate, Database sur RDS. Tout est opérationnel.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ STEP 14 ══════════════════════════════════════════════ -->
+    <div class="section" id="step-14">
+        <div class="section-header">
+            <div class="section-number">14</div>
+            <div>
+                <div class="section-title">Nettoyage et destruction du LAB</div>
+                <div class="section-meta">
+                    <span>⏱️ ~15 minutes</span>
+                    <span>🧹 Nettoyage complet</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="callout callout-danger">
+            <span class="callout-icon">⚠️</span>
+            <div class="callout-content">
+                <div class="callout-title">Ordre de destruction important</div>
+                <div class="callout-text">Suivez l'ordre ci-dessous pour éviter les erreurs de dépendances. Ne sautez pas d'étapes.</div>
+            </div>
+        </div>
+
+        <div class="terminal">
+            <div class="terminal-header">
+                <div class="terminal-dots"><span></span><span></span><span></span></div>
+                <span class="terminal-title">Destruction complète</span>
+                <button class="terminal-copy" onclick="copyCode(this)">Copier</button>
+            </div>
+            <pre><span class="comment"># 1. Vider le bucket S3 frontend</span>
+<span class="prompt">$</span> aws s3 rm s3://$BUCKET_NAME --recursive
+
+<span class="comment"># 2. Supprimer les images ECR</span>
+<span class="prompt">$</span> aws ecr batch-delete-image \
+  --repository-name taskmanager-backend \
+  --image-ids "$(aws ecr list-images --repository-name taskmanager-backend \
+  --query 'imageIds[*]' --output json)"
+
+<span class="comment"># 3. Détruire l'infrastructure (~10-15 min)</span>
+<span class="prompt">$</span> cd terraform/environments/dev
+<span class="prompt">$</span> terraform destroy
+<span class="warning">Tapez 'yes' pour confirmer</span>
+
+<span class="comment"># 4. (Optionnel) Détruire le remote state</span>
+<span class="prompt">$</span> cd ../../bootstrap
+<span class="prompt">$</span> terraform destroy
+
+<span class="comment"># 5. Supprimer l'utilisateur IAM temporaire</span>
+<span class="prompt">$</span> aws iam delete-user --user-name terraform-bootstrap</pre>
+        </div>
+
+        <div class="checkpoint">
+            <div class="checkpoint-icon">✓</div>
+            <div>
+                <div class="checkpoint-text">Checkpoint — LAB nettoyé</div>
+                <div class="checkpoint-desc">Toutes les ressources AWS sont supprimées. Aucun coût ne continuera à être facturé.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ STEP 15 ══════════════════════════════════════════════ -->
+    <div class="section" id="step-15">
+        <div class="section-header">
+            <div class="section-number">15</div>
+            <div>
+                <div class="section-title">Résumé des coûts et bilan</div>
+                <div class="section-meta">
+                    <span>💰 Estimation mensuelle</span>
+                    <span>🎓 Ce que vous avez appris</span>
+                </div>
+            </div>
+        </div>
+
+        <h3>Coûts mensuels (environnement DEV)</h3>
+        <table>
+            <thead><tr><th>Service</th><th>Coût/mois</th><th>% du total</th></tr></thead>
+            <tbody>
+                <tr><td>NAT Gateway</td><td>~32 $</td><td>40%</td></tr>
+                <tr><td>ALB</td><td>~18 $</td><td>22%</td></tr>
+                <tr><td>RDS (db.t4g.micro)</td><td>~15 $</td><td>19%</td></tr>
+                <tr><td>ECS Fargate</td><td>~10 $</td><td>12%</td></tr>
+                <tr><td>CloudFront + ECR + S3 + autres</td><td>~5 $</td><td>7%</td></tr>
+                <tr style="font-weight:700;"><td>TOTAL</td><td>~80 $</td><td>100%</td></tr>
+            </tbody>
+        </table>
+
+        <h3>Ce que vous avez appris</h3>
+        <ul>
+            <li>✅ Créer un <strong>VPC</strong> avec subnets publics/privés</li>
+            <li>✅ Configurer des <strong>Security Groups</strong> (moindre privilège)</li>
+            <li>✅ Déployer une base de données <strong>RDS</strong> avec secrets managés</li>
+            <li>✅ Conteneuriser une application et la pousser vers <strong>ECR</strong></li>
+            <li>✅ Déployer des conteneurs sur <strong>ECS Fargate</strong></li>
+            <li>✅ Héberger un SPA sur <strong>S3 + CloudFront</strong></li>
+            <li>✅ Écrire des modules <strong>Terraform</strong> réutilisables</li>
+            <li>✅ Mettre en place des pipelines <strong>CI/CD</strong> avec GitHub Actions</li>
+            <li>✅ Utiliser <strong>OIDC</strong> pour l'authentification sans clés permanentes</li>
+            <li>✅ Intégrer des scans de <strong>sécurité</strong> à chaque étape (DevSecOps)</li>
+        </ul>
+
+        <div class="checkpoint">
+            <div class="checkpoint-icon">🎉</div>
+            <div>
+                <div class="checkpoint-text">Félicitations !</div>
+                <div class="checkpoint-desc">Vous avez déployé un projet DevSecOps AWS complet et professionnel. Vous maîtrisez maintenant les fondamentaux de l'infrastructure cloud sécurisée.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <div class="nav-buttons">
+        <a href="index.html" class="nav-btn">← Retour au cours</a>
+        <a href="index.html" class="nav-btn nav-btn-next">Documentation complète →</a>
+    </div>
+</div>
+
+<!-- ═══ Scripts ════════════════════════════════════════════════════ -->
+<script>
+function toggleSidebar() {
+    document.getElementById('sidebar').classList.toggle('open');
+}
+
+function copyCode(btn) {
+    const pre = btn.closest('.terminal').querySelector('pre');
+    const text = pre.innerText
+        .replace(/^\$ /gm, '')
+        .replace(/^#.*$/gm, '')
+        .split('\n')
+        .filter(line => !line.match(/^(Initializing|Successfully|Terraform|Plan:|Apply|Success|Tapez|{")/))
+        .join('\n')
+        .trim();
+    navigator.clipboard.writeText(text).then(() => {
+        btn.textContent = '✓ Copié';
+        btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = 'Copier'; btn.classList.remove('copied'); }, 2000);
+    });
+}
+
+// Active sidebar link on scroll
+const sections = document.querySelectorAll('.section');
+const navLinks = document.querySelectorAll('.sidebar-nav a');
+const progressFill = document.getElementById('progressFill');
+const progressLabel = document.getElementById('progressLabel');
+
+function updateActiveSection() {
+    let current = '';
+    let sectionIndex = 0;
+
+    sections.forEach((section, index) => {
+        const rect = section.getBoundingClientRect();
+        if (rect.top <= 120) {
+            current = section.id;
+            sectionIndex = index + 1;
+        }
+    });
+
+    navLinks.forEach(link => {
+        link.classList.toggle('active', link.getAttribute('href') === '#' + current);
+    });
+
+    const progress = Math.round((sectionIndex / sections.length) * 100);
+    progressFill.style.width = progress + '%';
+    progressLabel.textContent = sectionIndex + ' / ' + sections.length;
+}
+
+window.addEventListener('scroll', updateActiveSection);
+updateActiveSection();
+
+// Close sidebar on mobile when clicking a link
+navLinks.forEach(link => {
+    link.addEventListener('click', () => {
+        if (window.innerWidth <= 900) {
+            document.getElementById('sidebar').classList.remove('open');
+        }
+    });
+});
+</script>
+
+</body>
+</html>
